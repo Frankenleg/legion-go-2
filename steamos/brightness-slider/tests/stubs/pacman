@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Stub: reports gamescope at $STUB_GAMESCOPE, or not installed when empty.
+if [[ -z "${STUB_GAMESCOPE:-}" ]]; then
+    echo "error: package 'gamescope' was not found" >&2
+    exit 1
+fi
+echo "gamescope $STUB_GAMESCOPE"
