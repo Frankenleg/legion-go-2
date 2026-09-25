@@ -5,7 +5,9 @@ step-by-step instructions, and none needs root access.
 
 ## Fixes
 
-No fixes are published yet.
+| Fix | What it fixes | System | Status |
+|---|---|---|---|
+| [Brightness slider](steamos/brightness-slider/) | The Game Mode brightness slider does nothing on the OLED screen | SteamOS with gamescope earlier than 3.16.29 | Tested on SteamOS 3.8.28 |
 
 ## Versions
 

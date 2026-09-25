@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Stub: `id -u` prints $STUB_UID; anything else goes to the real id.
+if [[ "${1:-}" == "-u" ]]; then
+    echo "${STUB_UID:-1000}"
+else
+    exec /usr/bin/id "$@"
+fi
