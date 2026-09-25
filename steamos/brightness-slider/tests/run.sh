@@ -150,6 +150,42 @@ run_script install.sh
 check "scripts path is a file: stops" test "$status" -eq 1
 check "scripts path is a file: explains" contains "could not create"
 
+# --- uninstall.sh ---
+new_case uninstall
+run_script install.sh
+run_script uninstall.sh
+check "uninstall: succeeds" test "$status" -eq 0
+check "uninstall: removes the profile" absent
+check "uninstall: says to return to Game Mode" contains "Return to Gaming Mode"
+
+new_case uninstall-nothing
+run_script uninstall.sh
+check "uninstall with nothing installed: exits cleanly" test "$status" -eq 0
+check "uninstall with nothing installed: says so" contains "not installed"
+
+new_case uninstall-unmarked
+mkdir -p "$dest_dir"
+printf 'someone else\n' >"$dest"
+run_script uninstall.sh
+check "uninstall of another file: stops" test "$status" -eq 1
+check "uninstall of another file: keeps it" test -e "$dest"
+check "uninstall of another file: explains" contains "was not installed by this fix"
+
+new_case uninstall-root
+run_script install.sh
+uid=0
+run_script uninstall.sh
+check "uninstall as root: stops" test "$status" -eq 1
+check "uninstall as root: keeps the profile" test -e "$dest"
+
+new_case uninstall-keeps-backups
+mkdir -p "$dest_dir"
+printf 'old\n' >"$dest"
+run_script install.sh
+run_script uninstall.sh
+backups=("$dest".bak-*)
+check "uninstall: keeps backups" test -e "${backups[0]}"
+
 # --- summary ---
 if ((failures)); then
     printf '\n%d failed\n' "$failures"
