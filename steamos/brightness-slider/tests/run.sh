@@ -186,6 +186,15 @@ run_script uninstall.sh
 backups=("$dest".bak-*)
 check "uninstall: keeps backups" test -e "${backups[0]}"
 
+# --- tag ---
+tag_of() { sed -n 's/^TAG="\(.*\)"$/\1/p' "$fix/$1"; }
+tag="$(tag_of install.sh)"
+check "tag: uninstall.sh matches install.sh" test "$(tag_of uninstall.sh)" == "$tag"
+check "tag: README names only the scripts' tag" \
+    test "$(grep -o 'brightness-slider-v[0-9][0-9.]*[0-9]' "$fix/README.md" | sort -u)" == "$tag"
+check "tag: README links install, uninstall, and the manual download" \
+    test "$(grep -c "$tag" "$fix/README.md")" -ge 3
+
 # --- summary ---
 if ((failures)); then
     printf '\n%d failed\n' "$failures"
