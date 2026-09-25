@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  brightness-slider:
+    name: brightness-slider
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck and Lua
+        run: sudo apt-get update && sudo apt-get install -y shellcheck lua5.4
+      - name: shellcheck
+        run: >-
+          shellcheck steamos/brightness-slider/install.sh
+          steamos/brightness-slider/uninstall.sh
+          steamos/brightness-slider/tests/run.sh
+          steamos/brightness-slider/tests/stubs/*
+      - name: Tests
+        run: bash steamos/brightness-slider/tests/run.sh
