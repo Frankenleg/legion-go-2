@@ -150,6 +150,34 @@ run_script install.sh
 check "scripts path is a file: stops" test "$status" -eq 1
 check "scripts path is a file: explains" contains "could not create"
 
+new_case scripts-not-writable
+mkdir -p "$dest_dir"
+chmod 0555 "$dest_dir"
+run_script install.sh
+check "scripts folder not writable: stops" test "$status" -eq 1
+check "scripts folder not writable: explains" contains "Not installed: could not write to the folder"
+check "scripts folder not writable: changes nothing" clean_dir
+chmod 0755 "$dest_dir"
+
+new_case destination-is-a-folder
+mkdir -p "$dest/inner"
+run_script install.sh
+check "destination is a folder: stops" test "$status" -eq 1
+check "destination is a folder: explains" contains "Not installed: $dest is a folder"
+check "destination is a folder: leaves it alone" test "$(ls -A "$dest")" == "inner"
+check "destination is a folder: no file left behind" test "$(ls -A "$dest_dir")" == "lenovo.legiongo2.oled.lua"
+
+new_case backup-fails
+mkdir -p "$dest_dir"
+printf 'old\n' >"$dest"
+chmod 0000 "$dest"
+run_script install.sh
+chmod 0644 "$dest"
+check "backup fails: stops" test "$status" -eq 1
+check "backup fails: explains" contains "Not installed: could not save a copy of"
+check "backup fails: keeps the old file" grep -qx old "$dest"
+check "backup fails: no file left behind" test "$(ls -A "$dest_dir")" == "lenovo.legiongo2.oled.lua"
+
 # --- uninstall.sh ---
 new_case uninstall
 run_script install.sh
@@ -171,6 +199,23 @@ check "uninstall of another file: stops" test "$status" -eq 1
 check "uninstall of another file: keeps it" test -e "$dest"
 check "uninstall of another file: explains" contains "was not installed by this fix"
 
+new_case uninstall-folder
+mkdir -p "$dest"
+run_script uninstall.sh
+check "uninstall of a folder: stops" test "$status" -eq 1
+check "uninstall of a folder: keeps it" test -d "$dest"
+check "uninstall of a folder: explains" contains "Not removed: $dest is a folder"
+check "uninstall of a folder: no raw error" test "$(grep -c '^head:' <<<"$out")" -eq 0
+
+new_case uninstall-not-writable
+run_script install.sh
+chmod 0555 "$dest_dir"
+run_script uninstall.sh
+chmod 0755 "$dest_dir"
+check "uninstall from a read-only folder: stops" test "$status" -eq 1
+check "uninstall from a read-only folder: keeps the profile" test -e "$dest"
+check "uninstall from a read-only folder: explains" contains "Not removed: could not delete"
+
 new_case uninstall-root
 run_script install.sh
 uid=0
@@ -185,6 +230,51 @@ run_script install.sh
 run_script uninstall.sh
 backups=("$dest".bak-*)
 check "uninstall: keeps backups" test -e "${backups[0]}"
+
+# --- truncated downloads ---
+# curl | bash runs whatever arrives. A download cut off at any line must not
+# change anything; only the complete script may act.
+run_truncated() {
+    out="$(head -n "$2" "$fix/$1" | env HOME="$home" PATH="$tests/stubs:$PATH" STUB_GAMESCOPE="$gamescope" \
+        STUB_UID="$uid" LG2_OS_RELEASE="$case_dir/os-release" LG2_DRM_DIR="$case_dir/drm" \
+        LG2_PROFILE_URL="$profile_url" bash 2>&1)"
+}
+
+truncated_install_changes_nothing() {
+    local lines n
+    lines="$(wc -l <"$fix/install.sh")"
+    for ((n = 1; n < lines; n++)); do
+        new_case "truncated-install-$n"
+        run_truncated install.sh "$n"
+        if [[ -e "$home/.config" ]]; then
+            printf '     install.sh cut after line %d changed %s\n' "$n" "$home/.config"
+            return 1
+        fi
+    done
+}
+check "truncated install.sh: changes nothing" truncated_install_changes_nothing
+
+truncated_uninstall_changes_nothing() {
+    local lines n
+    lines="$(wc -l <"$fix/uninstall.sh")"
+    for ((n = 1; n < lines; n++)); do
+        new_case "truncated-uninstall-$n"
+        run_script install.sh
+        run_truncated uninstall.sh "$n"
+        if [[ ! -e "$dest" ]]; then
+            printf '     uninstall.sh cut after line %d removed the profile\n' "$n"
+            return 1
+        fi
+    done
+}
+check "truncated uninstall.sh: changes nothing" truncated_uninstall_changes_nothing
+
+complete_download_installs() {
+    new_case piped-install
+    run_truncated install.sh "$(wc -l <"$fix/install.sh")"
+    cmp -s "$profile" "$dest"
+}
+check "complete install.sh through a pipe: installs" complete_download_installs
 
 # --- tag ---
 tag_of() { sed -n 's/^TAG="\(.*\)"$/\1/p' "$fix/$1"; }

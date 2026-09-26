@@ -3,7 +3,7 @@
 # https://github.com/Frankenleg/legion-go-2/tree/main/steamos/brightness-slider
 set -euo pipefail
 
-TAG="brightness-slider-v1.0.0"
+TAG="brightness-slider-v1.0.1"
 MARKER="-- legion-go-2 brightness-slider profile: https://github.com/Frankenleg/legion-go-2"
 FIXED_IN="3.16.29"
 NAME="lenovo.legiongo2.oled.lua"
@@ -37,50 +37,62 @@ panel_matches() {
     return 1
 }
 
-# id -u rather than $EUID so the tests can stub it.
-if [[ "$(id -u)" == 0 ]]; then
-    stop "run this without sudo. The fix goes in your own home folder."
-fi
-if ! grep -qxE 'ID="?steamos"?' "$OS_RELEASE" 2>/dev/null; then
-    stop "this fix is for SteamOS, and this system is not SteamOS."
-fi
-if ! panel_matches; then
-    stop "this device's screen is not the Legion Go 2 OLED panel (Samsung SDC 0x4301)."
-fi
-if ! installed="$(pacman -Q gamescope 2>/dev/null)"; then
-    stop "could not find the gamescope package with pacman."
-fi
-version="${installed#gamescope }"
-if (($(vercmp "$version" "$FIXED_IN") >= 0)); then
-    printf 'Your SteamOS already includes the fix (gamescope %s). Nothing to install.\n' "$version"
-    exit 0
-fi
+# The whole body is in main, called on the last line, so a download cut off
+# partway through curl | bash defines functions but runs nothing.
+main() {
+    # id -u rather than $EUID so the tests can stub it.
+    if [[ "$(id -u)" == 0 ]]; then
+        stop "run this without sudo. The fix goes in your own home folder."
+    fi
+    if ! grep -qxE 'ID="?steamos"?' "$OS_RELEASE" 2>/dev/null; then
+        stop "this fix is for SteamOS, and this system is not SteamOS."
+    fi
+    if ! panel_matches; then
+        stop "this device's screen is not the Legion Go 2 OLED panel (Samsung SDC 0x4301)."
+    fi
+    if ! installed="$(pacman -Q gamescope 2>/dev/null)"; then
+        stop "could not find the gamescope package with pacman."
+    fi
+    version="${installed#gamescope }"
+    if (($(vercmp "$version" "$FIXED_IN") >= 0)); then
+        printf 'Your SteamOS already includes the fix (gamescope %s). Nothing to install.\n' "$version"
+        exit 0
+    fi
 
-if ! mkdir -p "$DEST_DIR" 2>/dev/null; then
-    stop "could not create the folder $DEST_DIR."
-fi
-temporary="$(mktemp "$DEST_DIR/.$NAME.XXXXXX")"
-trap 'rm -f "$temporary"' EXIT
-if ! curl -fsSL --proto "$PROTOCOLS" -o "$temporary" "$PROFILE_URL"; then
-    stop "could not download the profile from $PROFILE_URL. Check your internet connection and try again."
-fi
-if [[ "$(head -n 1 "$temporary")" != "$MARKER" ]]; then
-    stop "the downloaded file is not the brightness-slider profile."
-fi
+    if ! mkdir -p "$DEST_DIR" 2>/dev/null; then
+        stop "could not create the folder $DEST_DIR."
+    fi
+    if [[ -e "$DEST" && ! -f "$DEST" ]]; then
+        stop "$DEST is a folder or special file. Move it out of the way and run this again."
+    fi
+    if ! temporary="$(mktemp "$DEST_DIR/.$NAME.XXXXXX" 2>/dev/null)"; then
+        stop "could not write to the folder $DEST_DIR."
+    fi
+    trap 'rm -f "$temporary"' EXIT
+    if ! curl -fsSL --proto "$PROTOCOLS" -o "$temporary" "$PROFILE_URL"; then
+        stop "could not download the profile from $PROFILE_URL. Check your internet connection and try again."
+    fi
+    if [[ "$(head -n 1 "$temporary")" != "$MARKER" ]]; then
+        stop "the downloaded file is not the brightness-slider profile."
+    fi
 
-if [[ -f "$DEST" ]] && cmp -s "$temporary" "$DEST"; then
-    printf 'The brightness-slider profile (%s) is already installed.\n' "$TAG"
-    exit 0
-fi
-if [[ -e "$DEST" ]]; then
-    backup="$DEST.bak-$(date -u +%Y%m%dT%H%M%SZ)"
-    cp -p "$DEST" "$backup"
-    printf 'Saved your previous file as %s\n' "$backup"
-fi
-chmod 0644 "$temporary"
-mv -f "$temporary" "$DEST"
+    if [[ -f "$DEST" ]] && cmp -s "$temporary" "$DEST"; then
+        printf 'The brightness-slider profile (%s) is already installed.\n' "$TAG"
+        exit 0
+    fi
+    if [[ -e "$DEST" ]]; then
+        backup="$DEST.bak-$(date -u +%Y%m%dT%H%M%SZ)"
+        if ! cp -p "$DEST" "$backup" 2>/dev/null; then
+            rm -f "$backup"
+            stop "could not save a copy of $DEST, so it was left in place."
+        fi
+        printf 'Saved your previous file as %s\n' "$backup"
+    fi
+    if ! chmod 0644 "$temporary" || ! mv -f "$temporary" "$DEST"; then
+        stop "could not write $DEST."
+    fi
 
-cat <<EOF
+    cat <<EOF
 
 Installed the brightness-slider profile ($TAG).
 
@@ -92,3 +104,6 @@ Next:
 To check it later, come back to Desktop Mode and run:
   journalctl -b -t gamescope-session | grep -q "Matched vendor: SDC product: 0x4301" && echo "working" || echo "not active yet"
 EOF
+}
+
+main "$@"
