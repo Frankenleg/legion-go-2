@@ -31,7 +31,7 @@ You need an internet connection. It takes a few minutes.
 4. **Copy this command:**
 
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/Frankenleg/legion-go-2/brightness-slider-v1.0.0/steamos/brightness-slider/install.sh | bash
+   curl -fsSL https://raw.githubusercontent.com/Frankenleg/legion-go-2/brightness-slider-v1.0.1/steamos/brightness-slider/install.sh | bash
    ```
 
 5. **Paste it into Konsole** with **Ctrl+Shift+V**, or right-click inside
@@ -57,7 +57,7 @@ No terminal needed.
 
 1. Switch to Desktop Mode (step 1 above).
 2. In a web browser, open
-   [the profile file](https://github.com/Frankenleg/legion-go-2/raw/brightness-slider-v1.0.0/steamos/brightness-slider/lenovo.legiongo2.oled.lua)
+   [the profile file](https://github.com/Frankenleg/legion-go-2/raw/brightness-slider-v1.0.1/steamos/brightness-slider/lenovo.legiongo2.oled.lua)
    and save it with **Ctrl+S**. Keep the name `lenovo.legiongo2.oled.lua`.
 3. Open the **Dolphin** file manager and go to your home folder. Press
    **Ctrl+H** to show hidden folders.
@@ -83,13 +83,17 @@ journalctl -b -t gamescope-session | grep -q "Matched vendor: SDC product: 0x430
   `not active yet`, check that the file is at
   `~/.config/gamescope/scripts/lenovo.legiongo2.oled.lua`.
 
+With gamescope 3.16.29 or later this check always says `not active yet`,
+because Valve's own profile is doing the work and this fix steps aside. See
+[When SteamOS gets gamescope 3.16.29](#when-steamos-gets-gamescope-31629).
+
 ## Uninstall
 
 If you used Option 1, run this in Konsole in Desktop Mode, then double-click
 **Return to Gaming Mode**:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Frankenleg/legion-go-2/brightness-slider-v1.0.0/steamos/brightness-slider/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Frankenleg/legion-go-2/brightness-slider-v1.0.1/steamos/brightness-slider/uninstall.sh | bash
 ```
 
 If you used Option 2, delete
@@ -105,6 +109,14 @@ gamescope 3.16.29 includes Valve's own profile for this screen, which also
 keeps real HDR in HDR games. Once a SteamOS update brings it, this fix steps
 aside by itself, and you can uninstall it. To see your version, run
 `pacman -Q gamescope` in Konsole.
+
+## Changes
+
+- 1.0.1: the scripts give a `Not installed:` or `Not removed:` message for
+  folder and permission problems instead of a raw shell error, and do nothing
+  if the download is cut off partway. The profile file is unchanged, so there
+  is no need to reinstall.
+- 1.0.0: first release.
 
 ## How it works
 
