@@ -88,7 +88,7 @@ main() {
         fi
         printf 'Saved your previous file as %s\n' "$backup"
     fi
-    if ! chmod 0644 "$temporary" || ! mv -f "$temporary" "$DEST"; then
+    if ! chmod 0644 "$temporary" 2>/dev/null || ! mv -f "$temporary" "$DEST" 2>/dev/null; then
         stop "could not write $DEST."
     fi
 

@@ -23,7 +23,11 @@ main() {
         printf 'Not removed: %s is a folder or special file, so it was left in place.\n' "$DEST" >&2
         exit 1
     fi
-    if [[ "$(head -n 1 "$DEST" 2>/dev/null)" != "$MARKER" ]]; then
+    if [[ ! -r "$DEST" ]]; then
+        printf 'Not removed: could not read %s, so it was left in place.\n' "$DEST" >&2
+        exit 1
+    fi
+    if [[ "$(head -n 1 "$DEST")" != "$MARKER" ]]; then
         printf 'Not removed: %s was not installed by this fix, so it was left in place.\n' "$DEST" >&2
         exit 1
     fi

@@ -207,6 +207,15 @@ check "uninstall of a folder: keeps it" test -d "$dest"
 check "uninstall of a folder: explains" contains "Not removed: $dest is a folder"
 check "uninstall of a folder: no raw error" test "$(grep -c '^head:' <<<"$out")" -eq 0
 
+new_case uninstall-unreadable
+run_script install.sh
+chmod 0000 "$dest"
+run_script uninstall.sh
+chmod 0644 "$dest"
+check "uninstall of an unreadable file: stops" test "$status" -eq 1
+check "uninstall of an unreadable file: keeps it" test -e "$dest"
+check "uninstall of an unreadable file: explains" contains "Not removed: could not read"
+
 new_case uninstall-not-writable
 run_script install.sh
 chmod 0555 "$dest_dir"
